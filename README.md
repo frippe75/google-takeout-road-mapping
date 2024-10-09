@@ -82,9 +82,18 @@ python process_takeout.py --folder-path ./Semantic_Location_History \
 
 This will generate the snapped_routes.geojson file containing only the filtered and snapped routes within the specified parameters.
 
-## 5. Contributing
+## 5. Example Map Visualization
+
+Below is an example of the resulting map visualization after processing Google Takeout data and snapping routes to roads.
+
+![Example Map](./image/example-map.png)
+
+This image shows routes within a geofenced area, filtered by activity type and date range.
+
+
+## 6. Contributing
 Feel free to open issues or submit pull requests to improve the functionality of this tool.
 
-## 6. License
+## 7. License
 This project is licensed under the MIT License. See the LICENSE file for more details.
 
