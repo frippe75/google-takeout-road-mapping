@@ -86,7 +86,7 @@ This will generate the snapped_routes.geojson file containing only the filtered 
 
 Below is an example of the resulting map visualization after processing Google Takeout data and snapping routes to roads.
 
-![Example Map](./image/example-map.png)
+![Example Map](./images/example-map.png)
 
 This image shows routes within a geofenced area, filtered by activity type and date range.
 
