@@ -37,10 +37,10 @@ First, export your location data from [Google Takeout](https://takeout.google.co
 To process the location data, use the following command:
 
 ```bash
-python process_takeout.py --folder-path ./Semantic_Location_History \
-  --output-geojson snapped_routes.geojson \
-  --activity-types IN_PASSENGER_VEHICLE \
-  --from-date 2024-01-01 --to-date 2024-08-31 \
+python process_takeout.py --folder-path ./Semantic_Location_History 
+  --output-geojson snapped_routes.geojson 
+  --activity-types IN_PASSENGER_VEHICLE 
+  --from-date 2024-01-01 --to-date 2024-08-31 
   --center-lat 59.3293 --center-lon 18.0686 --radius-km 30
 ```
 
@@ -55,7 +55,6 @@ python process_takeout.py --folder-path ./Semantic_Location_History \
 - `--center-lon`: Longitude of the center point for geofencing.
 - `--radius-km`: Radius (in kilometers) for geofencing.
 
-
 ### 3. Visualize the Output
 
 Once the script processes your Google Takeout data, you can visualize the resulting GeoJSON using any mapping tool that supports GeoJSON, such as:
@@ -67,16 +66,15 @@ Once the script processes your Google Takeout data, you can visualize the result
 
 Simply load the generated `snapped_routes.geojson` file into one of these tools to explore and analyze your filtered and snapped routes.
 
-
 ## 4. Example
 
 Here's an example of processing Google Takeout data for routes where you were driving (`IN_PASSENGER_VEHICLE`), within a 30km radius of Stockholm, between January 1, 2024, and August 31, 2024:
 
 ```bash
-python process_takeout.py --folder-path ./Semantic_Location_History \
-  --output-geojson snapped_routes.geojson \
-  --activity-types IN_PASSENGER_VEHICLE \
-  --from-date 2024-01-01 --to-date 2024-08-31 \
+python process_takeout.py --folder-path ./Semantic_Location_History 
+  --output-geojson snapped_routes.geojson 
+  --activity-types IN_PASSENGER_VEHICLE 
+  --from-date 2024-01-01 --to-date 2024-08-31 
   --center-lat 59.3293 --center-lon 18.0686 --radius-km 30
 ```
 
@@ -90,10 +88,8 @@ Below is an example of the resulting map visualization after processing Google T
 
 This image shows routes within a geofenced area, filtered by activity type and date range.
 
-
 ## 6. Contributing
 Feel free to open issues or submit pull requests to improve the functionality of this tool.
 
 ## 7. License
 This project is licensed under the MIT License. See the LICENSE file for more details.
-
