@@ -8,21 +8,43 @@ import requests
 
 OSRM_API_URL = "http://router.project-osrm.org/route/v1/driving/"
 
+# Country name normalization dictionary
+country_map = {
+    "sweden": ["sverige", "sweden"],
+    "usa": ["united states", "usa", "us"],
+    "spain": ["españa", "spain", "espanya"],
+    "france": ["france"]
+}
+
 def is_within_radius(lat, lon, center, radius_km):
     """Check if the coordinate is within the geofenced radius."""
     return geodesic((lat, lon), center).km <= radius_km
 
-#def parse_date(date_str):
-#    """Parse date string into datetime object."""
-#    return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
 def parse_date(date_str):
     """Parse date string into a datetime object, handling fractional seconds if present."""
     try:
-        return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S.%fZ')  # Handles fractional seconds
+        return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S.%fZ')
     except ValueError:
-        return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')  # Fallback for no fractional seconds
+        return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
 
-def extract_activity_segment(activity_segment, geofence=None, activity_filter=None, from_date=None, to_date=None):
+def normalize_country_name(name):
+    """Normalize common country name variations to a single base name."""
+    name = name.lower()
+    for base_name, variants in country_map.items():
+        if name in variants:
+            return base_name
+    return name
+
+def filter_by_country(address, exclude_countries):
+    """Checks if any excluded country is present in the address using country name normalization."""
+    address = address.lower()
+    for country in exclude_countries:
+        normalized_country = normalize_country_name(country)
+        if any(alias in address for alias in country_map.get(normalized_country, [country.lower()])):
+            return False
+    return True
+
+def extract_activity_segment(activity_segment, geofence=None, activity_filter=None, from_date=None, to_date=None, exclude_countries=None):
     """Extracts data from an activity segment if it meets the criteria."""
     activity_type = activity_segment.get('activityType', 'UNKNOWN')
 
@@ -36,6 +58,15 @@ def extract_activity_segment(activity_segment, geofence=None, activity_filter=No
     if (from_date and start_time < from_date) or (to_date and end_time > to_date):
         return None
 
+    # Check for country exclusion using address field
+    transit_path = activity_segment.get('transitPath', {})
+    if 'transitStops' in transit_path and exclude_countries:
+        for stop in transit_path['transitStops']:
+            address = stop.get('address', '')
+            if address and not filter_by_country(address, exclude_countries):
+                print(f"Excluding segment with address: {address}")
+                return None
+
     # Extract start and end points
     start_lat = activity_segment['startLocation']['latitudeE7'] / 1e7
     start_lon = activity_segment['startLocation']['longitudeE7'] / 1e7
@@ -48,7 +79,6 @@ def extract_activity_segment(activity_segment, geofence=None, activity_filter=No
 
     # Check if all points are within geofence
     if geofence:
-        # Check start, end, and all waypoints
         points_to_check = [(start_lat, start_lon), (end_lat, end_lon)] + waypoint_list
         if not any(is_within_radius(lat, lon, geofence['center'], geofence['radius_km']) for lat, lon in points_to_check):
             return None
@@ -64,7 +94,6 @@ def extract_activity_segment(activity_segment, geofence=None, activity_filter=No
 
 def snap_to_road(start_lat, start_lon, waypoints, end_lat, end_lon):
     """Snaps route to roads using OSRM."""
-    # Format the waypoints for OSRM
     waypoints_str = ';'.join([f"{lon},{lat}" for lat, lon in waypoints])
     url = f"{OSRM_API_URL}{start_lon},{start_lat};{waypoints_str};{end_lon},{end_lat}?overview=full&geometries=geojson"
     
@@ -75,7 +104,7 @@ def snap_to_road(start_lat, start_lon, waypoints, end_lat, end_lon):
         print(f"Failed to snap to road: {response.status_code}, {response.text}")
         return None
 
-def process_takeout_data(folder_path, output_geojson, geofence=None, activity_filter=None, from_date=None, to_date=None):
+def process_takeout_data(folder_path, output_geojson, geofence=None, activity_filter=None, from_date=None, to_date=None, exclude_countries=None, stroke_width=2.0, stroke_color="#FF0000"):
     """Processes all files in the Semantic Location History folder and extracts filtered data into GeoJSON."""
     features = []
     total_files = sum(len(files) for _, _, files in os.walk(folder_path))
@@ -99,7 +128,8 @@ def process_takeout_data(folder_path, output_geojson, geofence=None, activity_fi
                                 geofence=geofence, 
                                 activity_filter=activity_filter, 
                                 from_date=from_date, 
-                                to_date=to_date
+                                to_date=to_date, 
+                                exclude_countries=exclude_countries
                             )
                             if segment_data:
                                 print(f"  Processing route {route_count} in file {file}")
@@ -111,13 +141,13 @@ def process_takeout_data(folder_path, output_geojson, geofence=None, activity_fi
                                 )
                                 
                                 if snapped_route and 'routes' in snapped_route:
-                                    # Extract the snapped route
                                     snapped_coordinates = snapped_route['routes'][0]['geometry']['coordinates']
                                     feature = geojson.Feature(
                                         geometry=geojson.LineString(snapped_coordinates),
                                         properties={
                                             "activityType": segment_data["activity_type"],
-                                            "stroke-width": 2.2  # Proportionally thicker by 10%
+                                            "stroke-width": stroke_width,
+                                            "stroke-color": stroke_color
                                         }
                                     )
                                     features.append(feature)
@@ -125,8 +155,6 @@ def process_takeout_data(folder_path, output_geojson, geofence=None, activity_fi
                                 else:
                                     print(f"  Failed to snap route {route_count} in file {file}")
 
-
-    # Write to GeoJSON
     feature_collection = geojson.FeatureCollection(features)
     with open(output_geojson, 'w') as geojson_file:
         geojson.dump(feature_collection, geojson_file)
@@ -142,14 +170,15 @@ if __name__ == '__main__':
     parser.add_argument('--center-lat', type=float, help="Center latitude for geofencing")
     parser.add_argument('--center-lon', type=float, help="Center longitude for geofencing")
     parser.add_argument('--radius-km', type=float, help="Radius in kilometers for geofencing")
+    parser.add_argument('--exclude-countries', type=str, nargs='+', help="Exclude routes in specific countries (e.g., Sweden, USA)")
+    parser.add_argument('--stroke-width', type=float, default=2.0, help="Set the stroke width for GeoJSON visualization")
+    parser.add_argument('--stroke-color', type=str, default="#FF0000", help="Set the stroke color for GeoJSON visualization")
 
     args = parser.parse_args()
 
-    # Convert from/to dates to datetime objects
     from_date = datetime.strptime(args.from_date, '%Y-%m-%d') if args.from_date else None
     to_date = datetime.strptime(args.to_date, '%Y-%m-%d') if args.to_date else None
 
-    # Set up geofence if provided
     geofence = None
     if args.center_lat and args.center_lon and args.radius_km:
         geofence = {
@@ -157,13 +186,10 @@ if __name__ == '__main__':
             "radius_km": args.radius_km
         }
 
-    # Process the data and output to GeoJSON
+    exclude_countries = [normalize_country_name(country) for country in args.exclude_countries] if args.exclude_countries else None
+
     process_takeout_data(
         args.folder_path, 
         args.output_geojson, 
-        geofence=geofence, 
-        activity_filter=args.activity_types, 
-        from_date=from_date, 
-        to_date=to_date
-    )
+       
 
