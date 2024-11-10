@@ -1,15 +1,16 @@
 # Google Takeout Road Mapping
 
-**Google Takeout Road Mapping** is a Python tool that processes Google Takeout location data, allowing you to filter routes by activity (e.g., driving), apply geofencing, snap routes to roads using OSRM, and output GeoJSON files for visualization. The tool also supports customizable line thickness for mapping tools.
+**Google Takeout Road Mapping** is a Python tool that processes Google Takeout location data, allowing you to filter routes by activity (e.g., driving), apply geofencing, snap routes to roads using OSRM, and output GeoJSON files for visualization. The tool also supports customizable line thickness and color for mapping tools.
 
 ## Features
 
 - **Activity Filtering**: Filter routes based on specific activities (e.g., `IN_PASSENGER_VEHICLE` for car rides).
 - **Geofencing**: Only include routes within a defined geographic area (center point and radius).
 - **Date Range Filtering**: Limit routes to a specific time frame.
+- **Country Filtering**: Exclude routes in specified countries, supporting multiple name representations (e.g., `Sweden`, `Sverige`).
 - **Road Snapping**: Snap routes to actual roads using the OSRM API.
 - **GeoJSON Output**: Export the processed routes as a GeoJSON file for easy visualization.
-- **Customizable Line Thickness**: Control the thickness of route lines in the GeoJSON file for better visualization.
+- **Customizable Line Appearance**: Control the thickness and color of route lines in the GeoJSON file for better visualization.
 
 ## Prerequisites
 
@@ -54,6 +55,9 @@ python process_takeout.py --folder-path ./Semantic_Location_History
 - `--center-lat`: Latitude of the center point for geofencing.
 - `--center-lon`: Longitude of the center point for geofencing.
 - `--radius-km`: Radius (in kilometers) for geofencing.
+- `--exclude-countries`: Exclude routes from specified countries (e.g., `Sweden`, `USA`), with support for multiple country name representations.
+- `--stroke-width`: Set the stroke width for the route lines in the GeoJSON output (default is 2.0).
+- `--stroke-color`: Set the stroke color for the route lines in the GeoJSON output (default is `#FF0000`).
 
 ### 3. Visualize the Output
 
@@ -66,19 +70,22 @@ Once the script processes your Google Takeout data, you can visualize the result
 
 Simply load the generated `snapped_routes.geojson` file into one of these tools to explore and analyze your filtered and snapped routes.
 
+> **Note**: The `stroke-width` and `stroke-color` options will apply to visualization tools that support these GeoJSON properties.
+
 ## 4. Example
 
-Here's an example of processing Google Takeout data for routes where you were driving (`IN_PASSENGER_VEHICLE`), within a 30km radius of Stockholm, between January 1, 2024, and August 31, 2024:
+Here's an example of processing Google Takeout data for routes where you were driving (`IN_PASSENGER_VEHICLE`), within a 30km radius of Stockholm, between January 1, 2024, and August 31, 2024, with a custom line color and thickness:
 
 ```bash
 python process_takeout.py --folder-path ./Semantic_Location_History 
   --output-geojson snapped_routes.geojson 
   --activity-types IN_PASSENGER_VEHICLE 
   --from-date 2024-01-01 --to-date 2024-08-31 
-  --center-lat 59.3293 --center-lon 18.0686 --radius-km 30
+  --center-lat 59.3293 --center-lon 18.0686 --radius-km 30 
+  --stroke-width 2.5 --stroke-color "#FF5733"
 ```
 
-This will generate the snapped_routes.geojson file containing only the filtered and snapped routes within the specified parameters.
+This will generate the `snapped_routes.geojson` file containing only the filtered and snapped routes within the specified parameters.
 
 ## 5. Example Map Visualization
 
